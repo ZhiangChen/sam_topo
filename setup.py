@@ -26,5 +26,6 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'numpy>=1.24.2',
+        'ipympl>=0.9.3',
     ],
 )

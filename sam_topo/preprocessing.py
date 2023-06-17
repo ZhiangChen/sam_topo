@@ -14,7 +14,6 @@ def tif_to_png(tif_path, png_path):
     image = Image.fromarray(grayscale_array.astype(np.uint8))
     image.save(png_path, "PNG")
 
-
 def tif_to_colormap(tif_path, png_path, colormap_name="rainbow"):    
     grayscale_image = Image.open(tif_path)
     grayscale_array = np.array(grayscale_image)    
@@ -25,8 +24,7 @@ def tif_to_colormap(tif_path, png_path, colormap_name="rainbow"):
     colormap_image = plt.get_cmap(colormap_name)(grayscale_array)
     colormap_image = Image.fromarray((colormap_image * 255).astype(np.uint8))
     colormap_image.save(png_path)
-    
-    
+        
 def tif_to_png_batch(folder_path):
     assert os.path.exists(folder_path)
     tif_files = [file for file in os.listdir(folder_path) if file.endswith('tif')]
