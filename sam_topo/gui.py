@@ -65,7 +65,10 @@ class SAM_Topo_GUI(object):
         self.status_text = TextBox(ax_status_text, '', initial='Wait after click "Segment Everything"', color='white', hovercolor='white')
 
         
-        
+        #todo
+        # display mask info
+        # prompt to say the segmentation is done
+        # prompt to say the segmentation is starting
         
         # ==== once the automatic segmentation generation botton is pushed, ...
         # create a SAM predictor
