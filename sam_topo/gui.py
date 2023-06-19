@@ -36,7 +36,7 @@ class SAM_Topo_GUI(object):
         self.ax.autoscale(False)
         
         
-        # 1. create a slider for each parameter input, three parameters
+        # create a slider for each parameter input, three parameters
         self.points_per_side = 32
         self.ax_points_per_side= plt.axes([0.2, self.slider_bottom, 0.5, 0.03])  # [left, bottom, width, height]
         self.slider_points_per_side = Slider(self.ax_points_per_side, 'points_per_side', 16, 64, valinit=self.points_per_side, valstep=1)
@@ -52,27 +52,38 @@ class SAM_Topo_GUI(object):
         self.slider_stability_score_thresh = Slider(self.ax_stability_score_thresh, 'stability_score_thresh', 0.1, 1.0, valinit=self.stability_score_thresh)
         self.slider_stability_score_thresh.on_changed(self._update_stability_score_thresh)
         
-        # 2. create a button for automatic segmentation generation
+        # create a button for automatic segmentation generation
         self.ax_button_sam = plt.axes([0.3, 0.05, 0.2, 0.05])  # [left, bottom, width, height]
         self.button_sam = Button(self.ax_button_sam, 'Segment Everything')
         self.button_sam.on_clicked(self._push_button_sam)
         
-        # 3. add a status text box        
+        # add a status text box        
         self.ax_status_text = plt.axes([0.3, 0.12, 0.2, 0.03])  # [left, bottom, width, height]
         self.status_text = self.ax_status_text.text(0,0, 'Ready to SAM', fontsize=12, )
         self.ax_status_text.axis('off')
         
-        # 4. add a mask number text box        
+        # add a mask number text box        
         self.ax_mask_nummber = plt.axes([0.55, 0.12, 0.2, 0.03])  # [left, bottom, width, height]
         self.mask_number_text = self.ax_mask_nummber.text(0,0, '  ', fontsize=12, )
         self.ax_mask_nummber.axis('off')
         
+        # add a mouse click callback function
+        self.fig.canvas.mpl_connect('button_press_event', self._on_click)
+        self.add_xs, self.add_ys, self.rem_xs, self.rem_ys, self.trace = [], [], [], [], []
+        self.add_plot, = self.ax.plot([], [], 'o', markerfacecolor='green', markeredgecolor='black', markersize=5)
+        self.rem_plot, = self.ax.plot([], [], 'x', markerfacecolor='red', markeredgecolor='red', markersize=5)
+        
+        # set a flag between segment everything and interactive segmentation
         self.flag_interactive_segmentation = False
         
         plt.show()
         
     def _push_button_sam_confirm(self, _):
         if self.flag_interactive_segmentation is False:
+            self.status_text.set_text('Initializing ... wait')
+            self.fig.canvas.draw_idle()
+            plt.pause(0.001)
+            
             self.flag_interactive_segmentation = True
             self.ax_points_per_side.remove()
             self.ax_pred_iou_thresh.remove()
@@ -80,6 +91,9 @@ class SAM_Topo_GUI(object):
             self.ax_status_text.remove()
             self.ax_mask_nummber.remove()
             self.ax_button_sam.remove()
+            
+            self.predictor = SamPredictor(self.sam)
+            self.predictor.set_image(self.img)
             
             # create slider for the individual mask display 
             self.mask_id = 0
@@ -106,17 +120,27 @@ class SAM_Topo_GUI(object):
             # save annotation button
             self.button_sam_confirm.label.set_text("Save Annotations") 
             
+            # annotation guide text
+            self.ax_annotation_guide_text = plt.axes([0.2, self.slider_bottom + 0.05, 0.2, 0.03])  # [left, bottom, width, height]
+            self.annotation_guide_text= self.ax_annotation_guide_text.text(0,0, 'left click to include points, right click to exclude, press c to clear', fontsize=12, )
+            self.ax_annotation_guide_text.axis('off')
+            
             # status text
-            self.ax_annotation_status = plt.axes([0.2, self.slider_bottom + 0.05, 0.2, 0.03])  # [left, bottom, width, height]
-            self.annotation_statis_text = self.ax_annotation_status.text(0,0, '  ', fontsize=12, )
+            self.ax_annotation_status = plt.axes([0.2, self.slider_bottom + 0.1, 0.2, 0.03])  # [left, bottom, width, height]
+            self.annotation_status_text = self.ax_annotation_status.text(0,0, '  ', fontsize=12, )
             self.ax_annotation_status.axis('off')
+            
+            
+            # key press 
+            self.fig.canvas.mpl_connect('key_press_event', self._on_key)
             
             self.fig.canvas.draw_idle()
             
             
         else:
             # save the masks    
-            self.annotation_statis_text.set_text('Saving ... ')
+            self.annotation_status_text.set_text('Saving ... ')
+            self.annotation_status_text.set_color('black')
             self.fig.canvas.draw_idle()
             plt.pause(0.001)
                 
@@ -124,15 +148,38 @@ class SAM_Topo_GUI(object):
             with open(save_path, 'wb') as f:
                 pickle.dump(self.masks, f)
                 
-            self.annotation_statis_text.set_text('Saved to path ' + save_path)
+            self.annotation_status_text.set_text('Saved to path ' + save_path)
             self.fig.canvas.draw_idle()
             plt.pause(0.001)
             
             
         
     def _push_button_add(self, _):
-        pass
+        if len(self.add_xs)>0:
+            mask, score, _ = self.predictor.predict(point_coords=np.array(list(zip(self.add_xs, self.add_ys)) + 
+                                                                    list(zip(self.rem_xs, self.rem_ys))), 
+                                                point_labels=np.array([1] * len(self.add_xs) + [0] * len(self.rem_xs)), 
+                                                multimask_output=False)
+            
+            
+            add_mask = [{'segmentation': mask[0], 'area': np.count_nonzero(mask), 'predicted_iou':score, 'stability_score':1.0, 'bbox':None, 'crop_box':None}]
+            self.masks += add_mask
+            
+            # update slider
+            self.slider_mask_id.valmax = len(self.masks)-1 
+            self.slider_mask_id.ax.set_xlim(0, len(self.masks)-1)
+            self.slider_mask_id.valinit = len(self.masks)-1 
+            self.mask_id = len(self.masks)-1
+            self.slider_mask_id.reset() 
+            self.im = self.ax.imshow(self.img)
+            self._show_anns([self.masks[self.mask_id]])
+        else:
+            self.annotation_status_text.set_text('Click points to add a mask')
+            self.annotation_status_text.set_color('red')
+            
+            self.fig.canvas.draw_idle()
     
+        
     
     def _push_button_delete(self, _):
         if len(self.masks)>0:
@@ -148,20 +195,67 @@ class SAM_Topo_GUI(object):
                 self.slider_mask_id.reset() 
                 
                 self.im = self.ax.imshow(self.img)
-                self.show_anns([self.masks[self.mask_id]])
+                self._show_anns([self.masks[self.mask_id]])
             
             self.fig.canvas.draw_idle()
     
     
     def _push_button_modify(self, _):
-        pass
+        if len(self.add_xs)>0 or len(self.rem_xs)>0:
+            mask, score, _ = self.predictor.predict(point_coords=np.array(list(zip(self.add_xs, self.add_ys)) + 
+                                                                    list(zip(self.rem_xs, self.rem_ys))), 
+                                                point_labels=np.array([1] * len(self.add_xs) + [0] * len(self.rem_xs)), 
+                                                mask_input=self.masks[self.mask_id]['segmentation'][None, :, :].resize((1, 256, 256)),
+                                                multimask_output=False)
+            
+            new_mask = [{'segmentation': mask, 'area': np.count_nonzero(mask), 'predicted_iou':score, 'stability_score':1.0, 'bbox':None, 'crop_box':None}]
+            self.masks[self.mask_id] = new_mask
+            
+            # update slider
+            self.im = self.ax.imshow(self.img)
+            self._show_anns([self.masks[self.mask_id]])
+            
+        else:
+            self.annotation_status_text.set_text('Click points to modify')
+            self.annotation_status_text.set_color('red')
+            
+            self.fig.canvas.draw_idle()
+    
+    
+    def _on_click(self, event):
+        if event.inaxes != self.ax and (event.button in [1, 3]): return
+        x = int(np.round(event.xdata))
+        y = int(np.round(event.ydata))
+
+        if event.button == 1: # left click
+            self.trace.append(True)
+            self.add_xs.append(x)
+            self.add_ys.append(y)
+            self._show_points(self.add_plot, self.add_xs, self.add_ys)
+            
+        else: # right click
+            self.trace.append(False)
+            self.rem_xs.append(x)
+            self.rem_ys.append(y)
+            self._show_points(self.rem_plot, self.rem_xs, self.rem_ys)
+            
+    def _show_points(self, plot, xs, ys):
+        plot.set_data(xs, ys)
+        self.fig.canvas.draw()
+        
+    def _on_key(self, event):
+        if event.key == 'c':
+            self.add_xs, self.add_ys, self.rem_xs, self.rem_ys, self.trace = [], [], [], [], []
+            self.add_plot.set_data([], [])
+            self.rem_plot.set_data([], [])
+            self.fig.canvas.draw()
         
     
     def _update_mask_id(self, val):
         self.mask_id = self.slider_mask_id.val
         
         self.im = self.ax.imshow(self.img)
-        self.show_anns([self.masks[self.mask_id]])
+        self._show_anns([self.masks[self.mask_id]])
         self.fig.canvas.draw_idle()
         
         
@@ -196,13 +290,13 @@ class SAM_Topo_GUI(object):
     
     def _on_radio_button_visualize_clicked(self, label):
         if label=="masks":
-            self.show_anns(self.masks)
+            self._show_anns(self.masks)
             
         else:
             self.im = self.ax.imshow(self.img)
             self.fig.canvas.draw_idle()
     
-    def show_anns(self, anns):
+    def _show_anns(self, anns):
         if len(anns) == 0:
             return
         sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
