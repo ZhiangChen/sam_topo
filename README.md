@@ -15,3 +15,23 @@ pip install .
 ## Tutorials
 
 ## Demo
+1. Segment everything
+<div align=center>
+<img src="./docs/1.gif" width="80%"/>
+</div>
+
+
+2. Visualize individaul mask
+<div align=center>
+<img src="./docs/2.gif" width="80%"/>
+</div>
+
+3. Delete masks
+<div align=center>
+<img src="./docs/3.gif" width="80%"/>
+</div>
+
+4. Modify individaul mask
+<div align=center>
+<img src="./docs/4.gif" width="80%"/>
+</div>
