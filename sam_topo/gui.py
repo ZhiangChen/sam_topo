@@ -11,7 +11,7 @@ from scipy.ndimage import zoom
 import pickle
 
 class SAM_Topo_GUI(object):
-    def __init__(self, img_path, sam_checkpoint, model_type, is_cuda):
+    def __init__(self, img_path, sam_checkpoint, model_type, is_cuda, figsize=6):
         assert os.path.exists(img_path), "The image file does not exist."
         assert os.path.exists(sam_checkpoint), "The model file does not exist."
         self.img_path = img_path
@@ -30,7 +30,7 @@ class SAM_Topo_GUI(object):
         # create a matplotlib interactive figure
         self.slider_bottom = 0.2
         
-        self.fig, self.ax = plt.subplots(figsize=(10, 10))
+        self.fig, self.ax = plt.subplots(figsize=(figsize, figsize))
         self.fig.suptitle(f'SAM_TOPO GUI', fontsize=16)
         self.fig.subplots_adjust(bottom=self.slider_bottom+0.2)
         self.im = self.ax.imshow(self.img)
@@ -430,6 +430,7 @@ if __name__ == "__main__":
     sam_topo_gui = SAM_Topo_GUI(file_n, 
                                 sam_checkpoint = "../data/models/sam_vit_h_4b8939.pth", 
                                 model_type = "vit_h", 
-                                is_cuda=True)
+                                is_cuda=True,
+                                figsize=10)
     
     

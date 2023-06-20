@@ -27,7 +27,6 @@ setup(
     install_requires=[
         'numpy>=1.24.2',
         'ipympl>=0.9.3',
-        'cv2>=4.2.0',
         'matplotlib>=3.7.1',
         'scipy>=1.9.1',
     ],
