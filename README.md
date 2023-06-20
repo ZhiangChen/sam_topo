@@ -52,3 +52,8 @@ sam_topo_gui = SAM_Topo_GUI(img_path='../data/data/sample_data/beach_hillshade_g
 <div align=center>
 <img src="./docs/4.gif" width="80%"/>
 </div>
+
+5. Jupyter notebook option
+<div align=center>
+<img src="./docs/jupyter.png" width="80%"/>
+</div>
