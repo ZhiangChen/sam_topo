@@ -41,6 +41,7 @@ def tif_to_colormap_batch(folder_path, colormap_name="rainbow"):
         png_path = tif_path[:-4]+"_color.png"
         tif_to_colormap(tif_path, png_path, colormap_name)
         
+        
 if __name__ == "__main__":
     tif_to_png_batch('/home/shakebot/sam_topo/data/data/sample_data')
     tif_to_colormap_batch('/home/shakebot/sam_topo/data/data/sample_data')

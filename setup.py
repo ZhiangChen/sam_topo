@@ -29,5 +29,7 @@ setup(
         'ipympl>=0.9.3',
         'matplotlib>=3.7.1',
         'scipy>=1.9.1',
+        'geopandas>=0.13.2',
+        'rasterio>=1.3.7',
     ],
 )
