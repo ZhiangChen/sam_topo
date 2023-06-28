@@ -112,6 +112,7 @@ class Evaluate(object):
     
     def eval_prediction_masks(self, iou_threshold):
         _, num_gt_instances = self.iou_matrix.shape
+        gt_instance_ids = list(range(num_gt_instances))
         
         pred_evals = []
         
@@ -122,20 +123,25 @@ class Evaluate(object):
 
         for pred_idx, gt_idx in enumerate(self.matches):
             if gt_idx == 0:  # No match for predicted instance
-                pred_evals.append(-2)
+                pred_evals.append(-1)
                 false_positive_pred.append(self.predicted_masks[pred_idx])
             else:
                 iou = self.iou_matrix[pred_idx, gt_idx] #self.calculate_iou_mask(self.predicted_masks[pred_idx], self.gt_masks[gt_idx])
                 if iou >= iou_threshold:
                     pred_evals.append(gt_idx)
                     true_positive_pred.append(self.predicted_masks[pred_idx])
+                    if gt_idx in gt_instance_ids:
+                        gt_instance_ids.remove(gt_idx)
                     
                 else:
                     pred_evals.append(-1)
-                    false_negative_pred.append(self.predicted_masks[pred_idx])
+                    false_positive_pred.append(self.predicted_masks[pred_idx])
 
         true_positives = self._convert_mask_list_to_ndarray_masks(true_positive_pred)
         false_positives = self._convert_mask_list_to_ndarray_masks(false_positive_pred)
+        
+        for gt_idx in gt_instance_ids:
+            false_negative_pred.append(self.gt_masks[gt_idx])
         false_negatives = self._convert_mask_list_to_ndarray_masks(false_negative_pred)
         
         return pred_evals, true_positives, false_positives, false_negatives 
